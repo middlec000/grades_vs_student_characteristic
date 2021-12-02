@@ -21,3 +21,9 @@ Determine if the following assumptions are met:
 
 ## Present Findings
 Show the user the findings.
+
+# Planned Features to Add
+* Add 'About' section linked to this README in st.set_page_config: https://docs.streamlit.io/library/api-reference/utilities/st.set_page_config
+* Add example to show
+* Put groups into dictionary {name: values}
+* More options for which test to perform.
