@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import helper_methods
 
 @st.cache
@@ -16,13 +15,13 @@ def file_to_dataframe(file) -> pd.DataFrame:
             raise TypeError
     return df
 
+
 @st.cache
-def get_groups(df: pd.DataFrame, group_var: str, measure_var: str):
-    group_names = list(df[group_var].astype(str).unique())
-    groups = []
-    for group_name in group_names:
-        groups += [list(df[df[group_var] == group_name][measure_var].values)]
-    return group_names, groups
+def get_example_data() -> pd.DataFrame:
+    source = 'https://raw.githubusercontent.com/middlec000/grades_vs_student_characteristic/main/example_data/example_data.csv'
+    # source = './example_data/example_data.csv'
+    return pd.read_csv(source)
+
 
 def create_sidebar() -> dict:
     st.sidebar.write('# Additional Parameters')
@@ -64,88 +63,131 @@ def create_sidebar() -> dict:
 
     return {'alpha':alpha, 'center':center, 'normality_checker':normality_checker, 'homoskedasticity_checker':homoskedasticity_checker, 'proportiontocut':proportiontocut}
 
+
+def visual_check(df: pd.DataFrame) -> None:
+    st.write('## Visually Check Data')
+    st.write('Below are the first few rows of your file. Please check that these are correct.')
+    st.write(df.head())
+    return
+
+
+@st.cache
+def get_groups(df: pd.DataFrame, measure_var: str, group_var: str):
+    group_names = list(df[group_var].astype(str).unique())
+    groups = []
+    for group_name in group_names:
+        groups += [list(df[df[group_var] == group_name][measure_var].values)]
+    # Check there are 2 or more groups
+    num_groups = len(group_names)
+    if num_groups == 1:
+        st.warning(f'All students have the same {group_var}. Choose another grouping variable that will split the students into multiple groups.')
+    return group_names, groups
+
+
 def main():
     # Set Page Configuration
-    st.set_page_config(initial_sidebar_state='collapsed', menu_items=helper_methods.get_menu_items())
+    st.set_page_config(
+        layout='wide',
+        initial_sidebar_state='collapsed', 
+        menu_items=helper_methods.get_menu_items()
+    )
 
     # Create Sidebar
     params = create_sidebar()
 
     # Get Data
     st.write('# Step 1: Choose Your Data File Or Use Example')
-    st.write('The file must be one of the following formats: .csv, .xls, .xlsx')
-    uploaded_file = st.file_uploader("Choose a file")
-    if uploaded_file is not None:
-        try:
-            df = file_to_dataframe(file=uploaded_file)
-        except TypeError:
-            st.warning("You need to upload a csv or excel file.")
+    st.write('I suggest you use the example first, then try the analysis with your own data.')
+    own_data_vs_example = st.selectbox(
+        label = 'Decide to use your own data or use the example data.', 
+        options = ['Example', 'Bring Your Own Data'],
+        index = 0
+    )
+    if own_data_vs_example == 'Example':
+        df = get_example_data()
+        main2(df=df, params=params)
+    else:
+        st.write('The file must be one of the following formats: .csv, .xls, .xlsx')
+        uploaded_file = st.file_uploader(label="Choose a file",type=['csv', 'xls', 'xlsx'])
+        if uploaded_file is not None:
+            try:
+                df = file_to_dataframe(file=uploaded_file)
+                main2(df=df, params=params)
+            except TypeError:
+                st.warning("You need to upload a csv or excel file.")
+    return
 
-        st.write('## Visual Check')
-        st.write('Below are the first few rows of your file. Please check that these are correct.')
-        st.write(df.head())
 
-        # Get Variables
-        st.write('# Step 2: Select Variables')
-        measure_var = st.selectbox(
-            label = 'Select the measurement variable. This is the variable we will compare groups with. Typically this will be a test grade column or cumulative grade column in your data.', 
-            options = df.columns.to_list(),
-            index = 1
-        )
-        group_var = st.selectbox(
-            label = 'Select the grouping variable. This is the variable with which we will form groups of students. If the group variable is ethnicity, all students of each ethnicity will be grouped together.', 
-            options = df.columns.to_list(),
-            index = len(df.columns.to_list())-1
-        )
-        if group_var == measure_var:
-            st.warning('The measurement variable cannot be the same as the grouping variable.')
+def main2(df: pd.DataFrame, params: dict):
+    visual_check(df)
 
-        # Get Groups
-        group_names, groups = get_groups(df=df, group_var=group_var, measure_var=measure_var)
+    # Get Variables
+    st.write('# Step 2: Select Variables')
+    st.write('## Measurement Variable')
+    measure_var = st.selectbox(
+        label = 'Select the measurement variable. This is the variable we will compare groups with. Typically this will be a test grade column or cumulative grade column in your data.', 
+        options = df.columns.to_list(),
+        index = 1
+    )
+    st.write('## Grouping Variable')
+    group_var = st.selectbox(
+        label = 'Select the grouping variable. This is the variable with which we will form groups of students. If the group variable is race, all students of the same race will be grouped together.', 
+        options = df.columns.to_list(),
+        index = len(df.columns.to_list())-1
+    )
+    if group_var == measure_var:
+        st.warning('The measurement variable cannot be the same as the grouping variable.')
+    
+    # Get Groups
+    group_names, groups = get_groups(df=df, measure_var=measure_var, group_var=group_var)
 
-        # Check there are 2 or more groups
-        num_groups = len(group_names)
-        if num_groups == 1:
-            st.warning(f'All students have the same {group_var}. Choose another grouping variable that will split the students into multiple groups.')
+    st.write('# Step 3: Run Analysis')
+    st.write('See additional options in the sidebar on the left. Access it with the arrow at the top left of the page.')
 
-        st.write('# Step 3: Run Analysis')
-        st.write('See additional options in the sidebar on the left. Access it with the arrow at the top left of the page.')
+    if st.button(label='Analyze'):
+        st.write('## Descriptive Statistics')
+        st.write(helper_methods.get_descriptive_stats(df=df, group_var=group_var,measure_var=measure_var))
 
-        if st.button(label='Analyze'):
-            st.write('## Descriptive Statistics')
-            st.write(helper_methods.get_descriptive_stats(df=df, group_var=group_var,measure_var=measure_var))
+        st.write('## ANOVA Hypothesis Testing Assumptions')
+        normality_results = helper_methods.test_normality(group_names=group_names, groups=groups, params=params)
 
-            st.write('## ANOVA Hypothesis Testing Assumptions')
-            normality_results = helper_methods.test_normality(group_names=group_names, groups=groups, params=params)
+        homoskedasticity_results = helper_methods.test_homoskedasticity(groups=groups, params=params)
+        
+        anova_result = helper_methods.test_anova(groups=groups, params=params)
 
-            homoskedasticity_results = helper_methods.test_homoskedasticity(groups=groups, params=params)
-            
-            anova_result = helper_methods.test_anova(groups=groups, params=params)
+        st.write('### Normal Distribution')
+        st.write(f'The ANOVA test requires that each of the groups based on {group_var} are normally distributed in {measure_var}.')
+        if normality_results['Normally Distributed?'].all():
+            st.success('All groups are normally distributed.')
+        else:
+            st.error('Not all groups are normally distributed. Results of ANOVA test may not be valid.')
+        st.write(normality_results)
 
-            st.write('### Normal Distribution')
-            st.write(f'The ANOVA test requires that each of the groups based on {group_var} are normally distributed in {measure_var}.')
-            st.write(normality_results)
+        st.write('### Homoskedasticity')
+        st.write(f'The ANOVA test requires that each of the groups in {group_var} are have equal variance in {measure_var}.')
+        if homoskedasticity_results['Equal Variance?'].all():
+            st.success('All groups have similar variances.')
+        else:
+            st.error('Not all groups have similar variances. Results of ANOVA test may not be valid.')
+        st.write(homoskedasticity_results)
 
-            st.write('### Homoskedasticity')
-            st.write(f'The ANOVA test requires that each of the groups in {group_var} are have equal variance in {measure_var}.')
-            st.write(homoskedasticity_results)
+        st.write(f'## Results of ANOVA Test')
+        if anova_result['All Groups the Same?'].values:
+            st.write(f'### There is No Statistically Significant Difference in mean {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
+            st.write(anova_result)
+        else:
+            st.write(f'### There is a Statistically Significant Difference in {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
+            st.write(anova_result)
 
-            st.write(f'## Results of ANOVA Test')
-            if anova_result['All Groups the Same?'].values:
-                st.write(f'### There is No Statistically Significant Difference in mean {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
-                st.write(anova_result)
-            else:
-                st.write(f'### There is a Statistically Significant Difference in {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
-                st.write(anova_result)
-
-                st.write('### Post-Hoc Pairwise Significance Test')
-                pairwise_results = helper_methods.test_pairwise(
-                    group_names=group_names, 
-                    groups=groups, 
-                    params=params, 
-                    equal_var=True
-                )
-                st.write(pairwise_results)
+            st.write('### Post-Hoc Pairwise Significance Test')
+            pairwise_results = helper_methods.test_pairwise(
+                group_names=group_names, 
+                groups=groups, 
+                params=params, 
+                equal_var=True
+            )
+            st.write(pairwise_results)
+    return
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,5 @@
 from typing import List
 from scipy.stats import f_oneway, shapiro, levene, ttest_ind
-import streamlit as st
 import pandas as pd
 
 def get_menu_items() -> dict:
