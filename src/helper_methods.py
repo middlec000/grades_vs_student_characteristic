@@ -163,3 +163,8 @@ def test_pairwise(group_names: List[str], groups: List[List[float]], params: dic
     for column in [x for x in summary.columns if x not in columns]:
         summary = summary.drop(column, axis=1)
     return summary
+
+def file_format_example() -> pd.DataFrame:
+    data = {'Student ID (Optional, Not Used)':['Student ID 1', 'Student ID 2'], 'Measurement (Continuous)':['Measurement for Student 1', 'Measurement for Student 2'], 'Group (Categorical)':['Group for Student 1', 'Group for Student 2']}
+    example = pd.DataFrame(data=data)
+    return example

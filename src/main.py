@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import helper_methods
+import typing
 
 @st.cache
 def file_to_dataframe(file) -> pd.DataFrame:
@@ -95,6 +96,10 @@ def main():
     # Create Sidebar
     params = create_sidebar()
 
+    # Disclaimer
+    st.write('# Disclaimer: How to Interpret Results')
+    st.write('Correlation is not causation. Just because groups may have different grades does not mean that the grouping variable caused those grade differences. For example, if you group students by race and find that black students have lower grades than white students, this does not mean that the difference in race caused the difference in grades. There are likely lurking variables that relate the two such as economic status, systemic racism, and others. This website is meant as a tool for teachers to investigate if there is a difference in grades based on some characteristic of students. It cannot tell you where that difference comes from, if it exists.')
+
     # Get Data
     st.write('# Step 1: Choose Your Data File Or Use Example')
     st.write('I suggest you use the example first, then try the analysis with your own data.')
@@ -107,7 +112,9 @@ def main():
         df = get_example_data()
         main2(df=df, params=params)
     else:
-        st.write('The file must be one of the following formats: .csv, .xls, .xlsx')
+        st.write('The file must have the following:\n* Be one of these file types: .csv, .xls, .xlsx\n* Be in the format below')
+        st.write(helper_methods.file_format_example())
+        st.write('* The Measurement column must be continuous - any positive number (in a range) is meaningful. Example: scores from 0 to 30.\n* The Group column must be categorical - students can have one of only a few possible values. Example: race. Also, each group must have at least 3 members.\n* Note: You will likely have to create the Group column yourself in the data file.\n* Look at the Example dataset for further clarification.')
         uploaded_file = st.file_uploader(label="Choose a file",type=['csv', 'xls', 'xlsx'])
         if uploaded_file is not None:
             try:
@@ -173,10 +180,10 @@ def main2(df: pd.DataFrame, params: dict):
 
         st.write(f'## Results of ANOVA Test')
         if anova_result['All Groups the Same?'].values:
-            st.write(f'### There is No Statistically Significant Difference in mean {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
+            st.write(f'### There is NO statistically significant difference in {measure_var} means between {group_var} groups at the {(1-params["alpha"])*100}% confidence level.')
             st.write(anova_result)
         else:
-            st.write(f'### There is a Statistically Significant Difference in {measure_var} Between {group_var} Groups at the {(1-params["alpha"])*100}% Confidence Level.')
+            st.write(f'### There IS a statistically significant difference in {measure_var} means between {group_var} groups at the {(1-params["alpha"])*100}% confidence level.')
             st.write(anova_result)
 
             st.write('### Post-Hoc Pairwise Significance Test')
