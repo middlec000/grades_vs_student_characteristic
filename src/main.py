@@ -1,96 +1,13 @@
 import streamlit as st
 import pandas as pd
-import helper_methods
-import typing
-
-@st.cache
-def file_to_dataframe(file) -> pd.DataFrame:
-    try:
-        # read csv
-        df=pd.read_csv(file)
-    except:
-        try:
-            # read xls or xlsx
-            df=pd.read_excel(file)
-        except:
-            raise TypeError
-    return df
-
-
-@st.cache
-def get_example_data() -> pd.DataFrame:
-    source = 'https://raw.githubusercontent.com/middlec000/grades_vs_student_characteristic/main/example_data/example_data.csv'
-    # source = './example_data/example_data.csv'
-    return pd.read_csv(source)
-
-
-def create_sidebar() -> dict:
-    st.sidebar.write('# Additional Parameters')
-    confidence_level = st.sidebar.number_input(
-        label='Confidence Level:',
-        min_value=0.0,
-        max_value=1.0,
-        value=0.95
-    )
-    alpha = 1 - confidence_level
-
-    center = st.sidebar.selectbox(
-        label = 'Measure of Center:',
-        options = ['mean', 'median', 'trimmed'],
-        index = 0
-    )
-
-    if center == 'trimmed':
-        proportiontocut = st.sidebar.number_input(
-        label = 'Proportion to Cut:',
-        min_value=0.0,
-        max_value=1.0,
-        value=0.5
-    )
-    else:
-        proportiontocut = 0.5
-
-    normality_checker = st.sidebar.selectbox(
-        label = 'How to Check Normality Assumption:',
-        options = ['Shapiro-Wilk Test'],
-        index = 0
-    )
-
-    homoskedasticity_checker = st.sidebar.selectbox(
-        label = 'How to Check Homoskedasticity Assumption:',
-        options = ['Levene Test'],
-        index = 0
-    )
-
-    return {'alpha':alpha, 'center':center, 'normality_checker':normality_checker, 'homoskedasticity_checker':homoskedasticity_checker, 'proportiontocut':proportiontocut}
-
-
-def visual_check(df: pd.DataFrame) -> None:
-    st.write('## Visually Check Data')
-    st.write('Below are the first few rows of your file. Please check that these are correct.')
-    st.write(df.head())
-    return
-
-
-@st.cache
-def get_groups(df: pd.DataFrame, measure_var: str, group_var: str):
-    group_names = list(df[group_var].astype(str).unique())
-    groups = []
-    for group_name in group_names:
-        groups += [list(df[df[group_var] == group_name][measure_var].values)]
-    # Check there are 2 or more groups
-    num_groups = len(group_names)
-    if num_groups == 1:
-        st.warning(f'All students have the same {group_var}. Choose another grouping variable that will split the students into multiple groups.')
-    return group_names, groups
-
+from helper_methods import *
 
 def main():
     # Set Page Configuration
     st.set_page_config(
         layout='wide',
         initial_sidebar_state='collapsed', 
-        menu_items=helper_methods.get_menu_items()
+        menu_items=get_menu_items()
     )
 
     # Create Sidebar
@@ -102,7 +19,7 @@ def main():
 
     # Get Data
     st.write('# Step 1: Choose Your Data File Or Use Example')
-    st.write('I suggest you use the example first, then try the analysis with your own data.')
+    st.write('I suggest you use the example first, then try the analysis with your own data. Note that the example data was artificially created and is not from real students.')
     own_data_vs_example = st.selectbox(
         label = 'Decide to use your own data or use the example data.', 
         options = ['Example', 'Bring Your Own Data'],
@@ -113,7 +30,7 @@ def main():
         main2(df=df, params=params)
     else:
         st.write('The file must have the following:\n* Be one of these file types: .csv, .xls, .xlsx\n* Be in the format below')
-        st.write(helper_methods.file_format_example())
+        st.write(file_format_example())
         st.write('* The Measurement column must be continuous - any positive number (in a range) is meaningful. Example: scores from 0 to 30.\n* The Group column must be categorical - students can have one of only a few possible values. Example: race. Also, each group must have at least 3 members.\n* Note: You will likely have to create the Group column yourself in the data file.\n* Look at the Example dataset for further clarification.')
         uploaded_file = st.file_uploader(label="Choose a file",type=['csv', 'xls', 'xlsx'])
         if uploaded_file is not None:
@@ -153,14 +70,15 @@ def main2(df: pd.DataFrame, params: dict):
 
     if st.button(label='Analyze'):
         st.write('## Descriptive Statistics')
-        st.write(helper_methods.get_descriptive_stats(df=df, group_var=group_var,measure_var=measure_var))
+        descriptive_stats = get_descriptive_stats(df=df, group_var=group_var,measure_var=measure_var)
+        st.write(descriptive_stats)
 
         st.write('## ANOVA Hypothesis Testing Assumptions')
-        normality_results = helper_methods.test_normality(group_names=group_names, groups=groups, params=params)
+        normality_results = test_normality(group_names=group_names, groups=groups, params=params)
 
-        homoskedasticity_results = helper_methods.test_homoskedasticity(groups=groups, params=params)
+        homoskedasticity_results = test_homoskedasticity(groups=groups, params=params)
         
-        anova_result = helper_methods.test_anova(groups=groups, params=params)
+        anova_result = test_anova(groups=groups, params=params)
 
         st.write('### Normal Distribution')
         st.write(f'The ANOVA test requires that each of the groups based on {group_var} are normally distributed in {measure_var}.')
@@ -187,11 +105,13 @@ def main2(df: pd.DataFrame, params: dict):
             st.write(anova_result)
 
             st.write('### Post-Hoc Pairwise Significance Test')
-            pairwise_results = helper_methods.test_pairwise(
+            st.write(f'First see if there is a statistically significant difference between the {measure_var} means (recorded in the "Different?" column) of the two {group_var}s on the left. If there is a statistically significant difference, then you can see which {group_var} has higher mean {measure_var} in the "Higher" column.')
+            pairwise_results = test_pairwise(
                 group_names=group_names, 
                 groups=groups, 
                 params=params, 
-                equal_var=True
+                equal_var=homoskedasticity_results['Equal Variance?'].all(),
+                descriptive_stats=descriptive_stats
             )
             st.write(pairwise_results)
     return
