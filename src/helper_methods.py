@@ -19,8 +19,8 @@ def file_to_dataframe(file) -> pd.DataFrame:
 
 @st.cache
 def get_example_data() -> pd.DataFrame:
-    # source = 'https://raw.githubusercontent.com/middlec000/grades_vs_student_characteristic/main/example_data/example_data.csv'
-    source = './example_data/example1_data.csv'
+    source = 'https://raw.githubusercontent.com/middlec000/grades_vs_student_characteristic/main/example_data/example_data.csv'
+    # source = './example_data/example1_data.csv'
     return pd.read_csv(source)
 
 
