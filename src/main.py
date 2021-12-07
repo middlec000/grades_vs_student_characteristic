@@ -15,12 +15,12 @@ def main():
 
     # Disclaimer
     st.write('# Disclaimer: How to Interpret Results')
-    st.write('Correlation is not causation. Just because groups may have different grades does not mean that the grouping variable caused those grade differences. For example, if you group students by race and find that black students have lower grades than white students, this does not mean that the difference in race caused the difference in grades. There are likely lurking variables that relate the two such as economic status, systemic racism, and others. This website is meant as a tool for teachers to investigate if there is a difference in grades based on some characteristic of students. It cannot tell you where that difference comes from, if it exists.')
+    st.write('Correlation is not causation! Just because groups may have different grades does not mean that the grouping variable caused those grade differences. For example, if you group students by race and find that black students have lower grades than white students, this does not mean that the difference in race caused the difference in grades. There are likely lurking variables that relate the two such as economic status, parents education level, systemic racism, and others. This website is meant as a tool for teachers to investigate if there is a difference in grades based on some characteristic of students. It cannot tell you where that difference comes from, if it exists.\n\nIf you want to determine if your grouping variable is the cause of the difference in grades, you must perform a randomized controlled study (or find research that has already been done).')
 
     # Get Data
     st.write('# Step 1: Choose Your Data File Or Use Example')
     st.write('I suggest you use the example first, then try the analysis with your own data. Note that the example data was artificially created and is not from real students.')
-    own_data_vs_example = st.selectbox(
+    own_data_vs_example = st.radio(
         label = 'Decide to use your own data or use the example data.', 
         options = ['Example', 'Bring Your Own Data'],
         index = 0
